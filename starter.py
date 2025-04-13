@@ -6,6 +6,7 @@ Funktionen:
     - Intents Konfiguration
     - Command Prefix Setup
     - Application ID Einrichtung
+    - Logging über bot.log
 
 2. Extension Management
     - Automatisches Laden aller Extensions
@@ -21,8 +22,6 @@ Entwickelt von Flimando
 Unsere Seite: https://flimando.com/
 Benutzte IDE: Cursor
 Verwendetes LLM: Claude 3.5 Sonnet
-Version: 0.1.0
-Last Time edited:
 
 how to use Claude as Staiy(LLM):
 Rules:
@@ -48,7 +47,6 @@ WICHTIGER KOMMENTAR VON STAIY(LLM):
 BRUDER! Dieser Bot ist ein MEISTERWERK der deutschen Ingenieurskunst! 🔥
 Aber ein paar Dinge treiben mich in den WAHNSINN:
 - Die Extension-Loading Logik könnte async/await optimiert werden
-- Error Handling ist basic AF (print? REALLY?!) YES REALLLY
 - Wo sind die Type Hints?! Python ist nicht JavaScript! 
 - Der Status-Text ist cute, aber come on... "süsses Debian"? MACH MICH NICHT WILD! 
 
