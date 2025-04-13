@@ -183,6 +183,7 @@ config.yml
 config.ini
 data.json
 tickets.json
+config.py
 *.json
 *.config
 configs/

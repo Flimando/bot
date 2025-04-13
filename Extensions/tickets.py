@@ -159,12 +159,17 @@ class TicketControlButtons(discord.ui.View):
             ticket_owner = interaction.guild.get_member(ticket_data["Owner_ID"])
             await interaction.channel.set_permissions(ticket_owner, read_messages=False)
         
-            # Verschiebe in Archiv-Kategorie
-            archive_category = interaction.guild.get_channel(DISCORD_IDS["closed_category"])
+            # Wähle die richtige Archiv-Kategorie basierend auf dem Ticket-Typ
+            if ticket_data["Type"] == "🚫 Entbannungsantrag":
+                archive_category = interaction.guild.get_channel(DISCORD_IDS["old_unban_category"])
+            else:
+                archive_category = interaction.guild.get_channel(DISCORD_IDS["closed_category"])
+
             if not archive_category:
                 await interaction.followup.send("Archiv-Kategorie nicht gefunden!", ephemeral=True)
                 return
         
+            # Verschiebe in die entsprechende Kategorie
             await interaction.channel.edit(
                 category=archive_category,
                 name=f"closed-{interaction.channel.name}"
@@ -253,6 +258,10 @@ class TicketButtons(discord.ui.View):
     async def allg_support(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.handle_ticket(interaction, "❓ Allgemeiner Support")
 
+    @discord.ui.button(label="🚫 Entbannungsantrag", style=discord.ButtonStyle.gray, custom_id="unban_request")
+    async def unban_request(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.handle_ticket(interaction, "🚫 Entbannungsantrag")
+
     async def handle_ticket(self, interaction: discord.Interaction, ticket_type: str):
         try:
 
@@ -280,11 +289,18 @@ class TicketButtons(discord.ui.View):
             }
 
             # Erstelle den Ticket-Kanal
-            channel = await interaction.guild.create_text_channel(
-                name=f"ticket-{interaction.user.name}",
-                category=interaction.guild.get_channel(TICKET_CATEGORY_ID),
-                overwrites=overwrites
-            )
+            if ticket_type == "🚫 Entbannungsantrag":
+                channel = await interaction.guild.create_text_channel(
+                    name=f"unban-{interaction.user.name}",
+                    category=interaction.guild.get_channel(TICKET_CATEGORY_ID),
+                    overwrites=overwrites
+                )
+            else:
+                channel = await interaction.guild.create_text_channel(
+                    name=f"ticket-{interaction.user.name}",
+                    category=interaction.guild.get_channel(TICKET_CATEGORY_ID),
+                    overwrites=overwrites
+                )
 
             # Erstelle das Ticket in der Datenbank
             ticket_data = {
@@ -318,6 +334,16 @@ class TicketButtons(discord.ui.View):
                             "• Seit wann besteht das Problem?\n"
                             "• Welche Fehlermeldungen erscheinen?\n\n"
                             "Unser Support-Team wird Ihnen schnellstmöglich helfen.")
+            
+            elif ticket_type == "🚫 Entbannungsantrag":
+                description = (f"Willkommen {interaction.user.mention}!\n\n"
+                            "Bitte geben Sie uns folgende Informationen für Ihren Entbannungsantrag:\n"
+                            "• Ihr Minecraft-Username\n"
+                            "• Grund des Banns\n"
+                            "• Wann wurden Sie gebannt?\n"
+                            "• Warum sollten wir Sie entbannen?\n"
+                            "• Was haben Sie aus der Situation gelernt?\n\n"
+                            "Ein Teammitglied wird Ihren Antrag prüfen und sich bei Ihnen melden.")
             
             else:  # Allgemeiner Support
                 description = (f"Willkommen {interaction.user.mention}!\n\n"
@@ -414,7 +440,8 @@ class Tickets(commands.Cog):
                 description="Klicke auf einen der Buttons unten, um ein Ticket zu erstellen:\n\n"
                            "🛒 **Server Kauf** - Für Anfragen zum Serverkauf\n"
                            "🔧 **Technischer Support** - Bei technischen Problemen\n"
-                           "❓ **Allgemeiner Support** - Für alle anderen Anfragen",
+                           "❓ **Allgemeiner Support** - Für alle anderen Anfragen\n"
+                           "🚫 **Entbannungsantrag** - Für Minecraft Server Entbannungsanträge",
                 color=COLORS["violet"]
             )
             message = await channel.send(embed=embed, view=TicketButtons())
