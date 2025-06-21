@@ -193,7 +193,7 @@ class Counter(commands.Cog):
         # Prüfe ob Channel Counter-aktiv ist
         if channel_id not in self.counter_data or not self.counter_data[channel_id]["active"]:
             return
-            
+        #Checkt ob es eine Zahl ist, wenn nicht gehe in Except return
         try:
             number = int(message.content)
         except ValueError:
@@ -204,8 +204,6 @@ class Counter(commands.Cog):
         
         # Prüfe ob die Zahl korrekt ist
         if number == expected_number:
-            if message.content.startswith("*"):
-                return
             # Prüfe ob der User sich wiederholt
             if message.author.id == counter_info["last_user"]:
                 await message.channel.send(f"{message.author.mention} hat die Kette ruiniert! Der nächste muss bei 1 anfangen!")
