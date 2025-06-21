@@ -204,6 +204,8 @@ class Counter(commands.Cog):
         
         # Prüfe ob die Zahl korrekt ist
         if number == expected_number:
+            if message.content.startswith("*"):
+                return
             # Prüfe ob der User sich wiederholt
             if message.author.id == counter_info["last_user"]:
                 await message.channel.send(f"{message.author.mention} hat die Kette ruiniert! Der nächste muss bei 1 anfangen!")
