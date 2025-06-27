@@ -75,7 +75,8 @@ else:
         "todo": {              # TODO-System
             "Profiles": [],
             "Last Message ID": 0
-        }
+        },
+        "levels": {}           # Level-System (server-isoliert)
     }
     with open("data.json", "w") as file:
         json.dump(data, file, indent=4)
@@ -98,6 +99,13 @@ def dump():
 def lib():
     """Gibt die aktuelle Datenbank zurück"""
     return data
+
+
+# Prüfe ob levels existiert, falls nicht erstelle es
+if "levels" not in data:
+    data["levels"] = {}
+    dump()
+
 
 # ====== TICKET-SYSTEM FUNKTIONEN ======
 def is_ticket(channel_id):
@@ -220,6 +228,154 @@ def create_embed():
 todo_data = data["todo"]
 
 def get_timestamp() -> datetime:
-    """Gibt die aktuelle Uhrzeit zurück"""
-    return datetime.utcnow()
+    """Gibt den aktuellen Timestamp zurück"""
+    return datetime.now()
+
+# ====== LEVEL-SYSTEM FUNKTIONEN ======
+def setup_level_system(guild_id: str):
+    """Richtet das Level-System für einen Server ein"""
+    if guild_id not in data["levels"]:
+        data["levels"][guild_id] = {
+            "enabled": True,
+            "announcement_channel": None,
+            "xp_cooldown": 30,  # Sekunden
+            "xp_range": [1, 15],  # Min-Max XP pro Nachricht
+            "blocked_channels": [],  # Blockierte Channels für XP
+            "users": {}
+        }
+        dump()
+        return True
+    return False
+
+def is_level_system_enabled(guild_id: str) -> bool:
+    """Prüft ob das Level-System für einen Server aktiviert ist"""
+    return guild_id in data["levels"] and data["levels"][guild_id]["enabled"]
+
+def get_user_level_data(guild_id: str, user_id: str):
+    """Gibt die Level-Daten eines Users zurück"""
+    if guild_id not in data["levels"]:
+        return None
+    
+    if user_id not in data["levels"][guild_id]["users"]:
+        data["levels"][guild_id]["users"][user_id] = {
+            "xp": 0,
+            "level": 0,
+            "messages": 0,
+            "last_message_time": 0
+        }
+        dump()
+    
+    return data["levels"][guild_id]["users"][user_id]
+
+def add_xp_to_user(guild_id: str, user_id: str, xp_amount: int):
+    """Fügt XP einem User hinzu und gibt True zurück wenn Level-Up"""
+    if not is_level_system_enabled(guild_id):
+        return False
+    
+    user_data = get_user_level_data(guild_id, user_id)
+    if not user_data:
+        return False
+    
+    old_level = user_data["level"]
+    user_data["xp"] += xp_amount
+    user_data["messages"] += 1
+    user_data["last_message_time"] = int(datetime.now().timestamp())
+    
+    # Level berechnen: Level = sqrt(XP/100)
+    new_level = int((user_data["xp"] / 100) ** 0.5)
+    user_data["level"] = new_level
+    
+    dump()
+    
+    # True wenn Level-Up
+    return new_level > old_level
+
+def get_leaderboard(guild_id: str, limit: int = 10):
+    """Gibt die Top User eines Servers zurück"""
+    if guild_id not in data["levels"]:
+        return []
+    
+    users = data["levels"][guild_id]["users"]
+    sorted_users = sorted(users.items(), key=lambda x: x[1]["xp"], reverse=True)
+    return sorted_users[:limit]
+
+def can_gain_xp(guild_id: str, user_id: str) -> bool:
+    """Prüft ob ein User XP bekommen kann (Cooldown)"""
+    if guild_id not in data["levels"]:
+        return False
+    
+    if user_id not in data["levels"][guild_id]["users"]:
+        return True
+    
+    user_data = data["levels"][guild_id]["users"][user_id]
+    cooldown = data["levels"][guild_id]["xp_cooldown"]
+    current_time = int(datetime.now().timestamp())
+    
+    return (current_time - user_data["last_message_time"]) >= cooldown
+
+def get_xp_for_level(level: int) -> int:
+    """Berechnet die benötigten XP für ein Level"""
+    return int((level ** 2) * 100)
+
+def get_progress_to_next_level(xp: int) -> tuple:
+    """Gibt Fortschritt zum nächsten Level zurück (current_xp, needed_xp, percentage)"""
+    current_level = int((xp / 100) ** 0.5)
+    current_level_xp = get_xp_for_level(current_level)
+    next_level_xp = get_xp_for_level(current_level + 1)
+    
+    xp_in_current_level = xp - current_level_xp
+    xp_needed_for_next = next_level_xp - current_level_xp
+    
+    percentage = (xp_in_current_level / xp_needed_for_next) * 100 if xp_needed_for_next > 0 else 100
+    
+    return xp_in_current_level, xp_needed_for_next, percentage
+
+def set_announcement_channel(guild_id: str, channel_id: str):
+    """Setzt den Announcement-Channel für Level-Ups"""
+    if guild_id not in data["levels"]:
+        return False
+    
+    data["levels"][guild_id]["announcement_channel"] = channel_id
+    dump()
+    return True
+
+def get_announcement_channel(guild_id: str):
+    """Gibt den Announcement-Channel zurück"""
+    if guild_id not in data["levels"]:
+        return None
+    return data["levels"][guild_id]["announcement_channel"]
+
+def block_channel_for_xp(guild_id: str, channel_id: str) -> bool:
+    """Blockiert einen Channel für XP-Gewinn"""
+    if guild_id not in data["levels"]:
+        return False
+    
+    if channel_id not in data["levels"][guild_id]["blocked_channels"]:
+        data["levels"][guild_id]["blocked_channels"].append(channel_id)
+        dump()
+        return True
+    return False
+
+def unblock_channel_for_xp(guild_id: str, channel_id: str) -> bool:
+    """Entblockiert einen Channel für XP-Gewinn"""
+    if guild_id not in data["levels"]:
+        return False
+    
+    if channel_id in data["levels"][guild_id]["blocked_channels"]:
+        data["levels"][guild_id]["blocked_channels"].remove(channel_id)
+        dump()
+        return True
+    return False
+
+def is_channel_blocked(guild_id: str, channel_id: str) -> bool:
+    """Prüft ob ein Channel für XP blockiert ist"""
+    if guild_id not in data["levels"]:
+        return False
+    return channel_id in data["levels"][guild_id]["blocked_channels"]
+
+def get_blocked_channels(guild_id: str) -> list:
+    """Gibt alle blockierten Channels eines Servers zurück"""
+    if guild_id not in data["levels"]:
+        return []
+    return data["levels"][guild_id]["blocked_channels"]
 

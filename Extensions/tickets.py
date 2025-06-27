@@ -361,6 +361,7 @@ class TicketButtons(discord.ui.View):
             
             # Sende das Embed mit den Kontroll-Buttons
             message = await channel.send(embed=embed, view=TicketControlButtons())
+            await channel.send(f"{interaction.guild.get_role(1028682945810137188).mention}")
             # Speichere die Message-ID
             ticket_data = get_ticket_data(channel.id)
             if ticket_data:

@@ -143,9 +143,14 @@ async def load_extensions() -> None:
 async def on_connect() -> None:
     await load_extensions()
 
+if BOT_CONFIG["beta"]:
+    token = str(BOT_CONFIG["test_token"])
+else:
+    token = str(BOT_CONFIG["token"])
+
 def main() -> NoReturn:
     try:
-        bot.run(BOT_CONFIG["token"])
+        bot.run(token)
     except Exception as e:
         logger.critical(f"Bot konnte nicht gestartet werden: {str(e)}", exc_info=True)
         sys.exit(1)
