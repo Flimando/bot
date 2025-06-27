@@ -108,13 +108,22 @@ bot: commands.Bot = commands.Bot(
 @bot.event
 async def on_ready() -> None:
     await bot.tree.sync()
-    await bot.change_presence(
-        status=discord.Status.online, 
-        activity=discord.Activity(
-            type=discord.ActivityType.playing, 
-            name="Production Environment 🚀"
+    if BOT_CONFIG["beta"]:
+        await bot.change_presence(
+            status=discord.Status.online, 
+            activity=discord.Activity(
+                type=discord.ActivityType.playing, 
+                name="Development Environment 🚀"
+            )
         )
-    )
+    else:
+        await bot.change_presence(
+            status=discord.Status.online, 
+            activity=discord.Activity(
+                type=discord.ActivityType.playing, 
+                name="GTA VI"
+            )
+        )
 
 async def load_extensions() -> None:
     """Lädt alle Extensions aus dem Extensions-Ordner."""
